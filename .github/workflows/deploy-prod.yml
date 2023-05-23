@@ -67,7 +67,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT / it's "write" because the temporary permission token must be created as part of the job
       contents: read  # This is required for actions/checkout
-    needs: build
+    needs: build-n-sonar
     runs-on: ubuntu-latest
     steps:
       - name: Get code
