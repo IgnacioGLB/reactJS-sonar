@@ -1,0 +1,93 @@
+name: Deployment Prod
+on:
+  push:
+    branches:
+      - master
+  #pull_request:
+  #  types:
+  #    - closed
+  #  branches: 
+  #    - master
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Load & cache dependencies
+        id: cache-deps
+        uses: ./.github/actions/cached-deps # composite action
+        with:
+          caching: 'true' # aca le estoy agregando el input para que la accion no corra
+      - name: Output information
+        run: echo "Cache used? ${{ steps.cache-deps.outputs.used-cache }}"
+      - name: Lint code
+        run: npm run lint
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Load & cache dependencies
+        uses: ./.github/actions/cached-deps
+        with:
+          caching: 'true' # input para que corra o no
+      - name: Test code
+        id: run-tests
+        run: npm run test
+      - name: Upload test report # reporte por si falla
+        if: failure() && steps.run-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report
+          path: test.json
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Load & cache dependencies
+        uses: ./.github/actions/cached-deps # si no le agrego el 'with caching true/false' van a correr por default
+      - name: Build website
+        run: npm run build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist-files
+          path: dist
+  deploy:
+    permissions:
+      id-token: write # This is required for requesting the JWT / it's "write" because the temporary permission token must be created as part of the job
+      contents: read  # This is required for actions/checkout
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: Get build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist-files
+          path: ./dist
+      - name: Output contents
+        run: ls
+      - name: Get AWS permissions # usando OpenID (OIDC) en lugar de credentials (even as secrets) para aumentar la seguridad
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: us-east-1
+      - name: Deploy site
+        id: deploy
+        uses: ./.github/actions/deploy-s3-docker
+        #env: # CAMBIE METODO DE AUTHENTICATIOIN POR OpenID (OIDC)
+        #  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        #  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        with: 
+          bucket: reactjswebapp-prod
+          dist-folder: ./dist
+      - name: Output information
+        run: |
+          echo "Live URL: ${{ steps.deploy.outputs.website-url }}"

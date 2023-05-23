@@ -1,0 +1,38 @@
+name: 'Get & Cache Dependencies'
+description: 'Get the dependencies (via npm) and cache them.'
+inputs:
+  caching: 
+    description: 'Whether to cache dependencies or not.'
+    required: false
+    default: 'true'
+outputs:
+  used-cache: #just a comment
+    description: 'Whether the cache was used.'
+    value: ${{ steps.install.outputs.cache }}
+  # experiment
+  unused-cache:
+    description: 'Whether the cache was not used.'
+    value: ${{ steps.not-install.outputs.cache }} # arroja "true" ante la pregunta del otro step "cache used?"
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache dependencies
+      if: inputs.caching == 'true' # este step de la action va a correr si en inputs el default es true (como en este caso)
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+    - name: Install dependencies
+      id: install
+      if: steps.cache.outputs.cache-hit != 'true' || inputs.caching!= 'true' # "||" es "or"
+      run: |
+        npm ci
+        echo "cache='${{ inputs.caching }}'" >> $GITHUB_OUTPUT
+      shell: bash # hay que sumar esto cuando usas "run" key para un command
+    # experiment
+    - name: Dependencies not installed
+      id: not-install
+      if: steps.cache.outputs.cache-hit == 'true' || inputs.caching == 'true' 
+      run: echo "cache='${{ inputs.caching }}'" >> $GITHUB_OUTPUT
+      shell: bash
