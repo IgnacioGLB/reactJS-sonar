@@ -2,7 +2,7 @@ name: Deployment Prod
 on:
   push:
     branches:
-      - master
+      - main
   #pull_request:
   #  types:
   #    - closed
@@ -79,20 +79,20 @@ jobs:
           path: ./dist
       - name: Output contents
         run: ls
-      - name: Get AWS permissions # usando OpenID (OIDC) en lugar de credentials (even as secrets) para aumentar la seguridad
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: us-east-1
-      - name: Deploy site
-        id: deploy
-        uses: ./.github/actions/deploy-s3-docker
+      #- name: Get AWS permissions # usando OpenID (OIDC) en lugar de credentials (even as secrets) para aumentar la seguridad
+      #  uses: aws-actions/configure-aws-credentials@v1
+      #  with:
+      #    role-to-assume: ${{ secrets.AWS_ROLE }}
+      #    aws-region: us-east-1
+      #- name: Deploy site
+      #  id: deploy
+      #  uses: ./.github/actions/deploy-s3-docker
         #env: # CAMBIE METODO DE AUTHENTICATIOIN POR OpenID (OIDC)
         #  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         #  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        with: 
-          bucket: reactjswebapp-prod
-          dist-folder: ./dist
-      - name: Output information
-        run: |
-          echo "Live URL: ${{ steps.deploy.outputs.website-url }}"
+      #  with: 
+      #    bucket: reactjswebapp-prod
+      #    dist-folder: ./dist
+      #- name: Output information
+      #  run: |
+      #    echo "Live URL: ${{ steps.deploy.outputs.website-url }}"
