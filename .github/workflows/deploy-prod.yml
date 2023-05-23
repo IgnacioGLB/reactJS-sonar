@@ -24,7 +24,7 @@ jobs:
         run: echo "Cache used? ${{ steps.cache-deps.outputs.used-cache }}"
       - name: Lint code
         run: npm run lint
-  test:
+  test-n-sonar:
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -43,6 +43,11 @@ jobs:
         with:
           name: test-report
           path: test.json
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
   build:
     needs: test
     runs-on: ubuntu-latest
